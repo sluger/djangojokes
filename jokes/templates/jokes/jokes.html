@@ -1,6 +1,59 @@
 {% extends 'jokes/base.html' %}
 
 {% block content %}
-<p>Fetching jokes..</p>
-<div class="chart-wrapper"></div>
+<div class="chartjs-wrapper">
+  <p>Fetching jokes in real time</p>
+  <canvas id="jokesChart"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.min.js"></script>
+<script>
+  const jokes = [];
+  const labels = [];
+
+  const padding = {left: 50, right: 50};
+
+  const ctx = document.querySelector('#jokesChart').getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Jokes',
+        backgroundColor: 'rgb(255, 99, 132)',
+        borderColor: 'rgb(255, 99, 132)',
+        data: jokes,
+        fill: false
+      }]
+    },
+    options: {
+      responsive: true,
+      layout: {
+        padding
+      },
+      scales: {
+        yAxes: [{
+          labelString: 'Joke length'
+        }]
+      }
+    }
+  });
+
+
+  function sleep(time) {
+    return new Promise(resolve => setTimeout(resolve, time));
+  }
+  function poll(fn, time) {
+    return fn().then(sleep(time).then(() => poll(fn, time)));
+  }
+
+  poll(() => fetch('http://api.icndb.com/jokes/random').then((d) => d.json()).then((d) => {
+    const joke = d.value;
+    jokes.push({key: joke.id, value: joke.joke.length})
+    chart.data.labels = jokes.map((d) => d.key);
+    chart.data.datasets[0].data = jokes.map((d) => d.value);
+    chart.update();
+  }), 1000);
+
+</script>
 {% endblock %}
